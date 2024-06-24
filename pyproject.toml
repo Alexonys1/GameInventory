@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "gameinventory"
+version = "0.1.0"
+description = ""
+authors = ["Alex <leha.bondar.05@mail.ru>"]
+readme = "README.md"
+
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pytest = "^8.2.2"
+pydantic = "^2.7.4"
+loguru = "^0.7.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
