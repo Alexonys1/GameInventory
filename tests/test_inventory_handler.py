@@ -16,6 +16,7 @@ class InventoryHandler[T](Inventory[T]):
             numeration_mode: NumerationModesForInventory = NumerationModesForInventory.BY_COLUMNS,
             default_factory: Callable[[], T] = lambda: None,
     ):
+        # Сделано исключительно для теста.
         super().__init__(rows=rows, columns=columns, numeration_mode=numeration_mode, default_factory=default_factory)
 
     def __post_init__(self):

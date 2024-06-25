@@ -1,7 +1,11 @@
+import inspect
+
 from abc import ABC, abstractmethod
 from pydantic import validate_call
 from collections.abc import Callable
 from typing import Final
+
+from loguru import logger as log
 
 from .data_classes import InventoryCell, NumerationModesForInventory
 from .exceptions import ItemNotFound, CellNumberOutOfRange
@@ -25,6 +29,7 @@ class Inventory[T](ABC):
             for num in range(1, rows * columns + 1)
         }
         self._default_item: Final[T] = default_factory()
+        log.debug(f"Создан экземпляр {self}")
         self.__post_init__()
 
     def __len__(self):
@@ -63,48 +68,70 @@ class Inventory[T](ABC):
 
     @validate_call
     def set(self, cell_number: int, item: T) -> None:
+        func_name = inspect.currentframe().f_code.co_name
+        log.trace(f"Вызывается метод {func_name}")
         self._on_set()
         if 1 <= cell_number <= len(self._all_cells):
+            log.debug(f"{func_name} записывает в ячейку №{cell_number} {item=}")
             self._all_cells[cell_number] = item
         else:
             raise CellNumberOutOfRange(cell_number, len(self._all_cells))
 
     @validate_call
     def get(self, cell_number: int) -> T:
+        func_name = inspect.currentframe().f_code.co_name
+        log.trace(f"Вызывается метод {func_name}")
         self._on_get()
         if 1 <= cell_number <= len(self._all_cells):
-            return self._all_cells[cell_number]
+            result = self._all_cells[cell_number]
+            log.debug(f"{func_name} возвращает из ячейки №{cell_number} {result}")
+            return result
         else:
             raise CellNumberOutOfRange(cell_number, len(self._all_cells))
 
     @validate_call
     def get_first_found_item(self, item: T) -> InventoryCell:
+        func_name = inspect.currentframe().f_code.co_name
+        log.trace(f"Вызывается метод {func_name}")
         self._on_get()
         for key, value in self._all_cells.items():
             if self._all_cells[key] == item:
-                return InventoryCell(cell_number=key, item=value)
+                result = InventoryCell(cell_number=key, item=value)
+                log.debug(f"{func_name} возвращает {result}")
+                return result
         raise ItemNotFound(item)
 
     @validate_call
     def get_last_found_item(self, item: T) -> InventoryCell:
+        func_name = inspect.currentframe().f_code.co_name
+        log.trace(f"Вызывается метод {func_name}")
         self._on_get()
         for key, value in reversed(self._all_cells.items()):
             if self._all_cells[key] == item:
-                return InventoryCell(cell_number=key, item=value)
+                result = InventoryCell(cell_number=key, item=value)
+                log.debug(f"{func_name} возвращает {result}")
+                return result
         raise ItemNotFound(item)
 
     @validate_call
     def set_into_first_found_empty_cell(self, item: T) -> None:
+        func_name = inspect.currentframe().f_code.co_name
+        log.trace(f"Вызывается метод {func_name}")
         self._on_set()
         for key, value in self._all_cells.items():
             if value == self._default_item:
+                log.debug(f"{func_name} записывает в ячейку №{key} {item=}")
                 self._all_cells[key] = item
                 break
 
     @validate_call
     def what_contains(self, cell_number: int) -> T:
+        func_name = inspect.currentframe().f_code.co_name
+        log.trace(f"Вызывается метод {func_name}")
         if 1 <= cell_number <= len(self._all_cells):
-            return self._all_cells[cell_number]
+            result = self._all_cells[cell_number]
+            log.debug(f"{func_name} возвращает из ячейки №{cell_number} {result}")
+            return result
         else:
             raise CellNumberOutOfRange(cell_number, len(self._all_cells))
 
