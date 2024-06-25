@@ -8,6 +8,16 @@ from game_inventory import NumerationModesForInventory
 # Пользователь должен будет переопределить
 # два метода абстрактного класса.
 class InventoryHandler[T](Inventory[T]):
+    def __init__(
+            self,
+            *,
+            rows: int = 5,
+            columns: int = 12,
+            numeration_mode: NumerationModesForInventory = NumerationModesForInventory.BY_COLUMNS,
+            default_factory: Callable[[], T] = lambda: None,
+    ):
+        super().__init__(rows=rows, columns=columns, numeration_mode=numeration_mode, default_factory=default_factory)
+
     def __post_init__(self):
         self.test_var: str = "POST INIT"  # Добавляю сугубо для теста.
 
@@ -21,38 +31,28 @@ class InventoryHandler[T](Inventory[T]):
         pass
 
 
-def create_common_inventory_handler_for_tests[T](
-        *,
-        rows: int = 5,
-        columns: int = 12,
-        numeration_mode: NumerationModesForInventory = NumerationModesForInventory.BY_COLUMNS,
-        default_factory: Callable[[], T | None] = lambda: None,
-) -> InventoryHandler[T]:
-    return InventoryHandler[T](rows=rows, columns=columns, numeration_mode=numeration_mode, default_factory=default_factory)
-
-
 # ================== UNIT TESTS ================== #
 def test_post_init_of_inventory_handler():
-    sut = create_common_inventory_handler_for_tests()
+    sut = InventoryHandler()
 
     assert sut.test_var == "POST INIT"
 
 
 def test_inventory_handler_len():
-    sut = create_common_inventory_handler_for_tests()
+    sut = InventoryHandler()
 
     assert len(sut) == 60
 
 
 def test_action_on_set():
-    sut = create_common_inventory_handler_for_tests()
+    sut = InventoryHandler[str | None]()
     sut.set(cell_number=7, item="value")
 
     assert sut.test_var == "ON SET"
 
 
 def test_action_on_get():
-    sut = create_common_inventory_handler_for_tests()
+    sut = InventoryHandler[str | None]()
     sut.set(cell_number=7, item="value")
     result = sut.get(cell_number=7)
 
@@ -61,14 +61,14 @@ def test_action_on_get():
 
 
 def test_default_factory_of_inventory_handler():
-    sut = create_common_inventory_handler_for_tests(default_factory=lambda: "value")
+    sut = InventoryHandler(default_factory=lambda: "value")
 
     for i in range(1, 61):
         assert sut.get(i) == "value"
 
 
 def test_get_first_found_item():
-    sut = create_common_inventory_handler_for_tests()
+    sut = InventoryHandler[str | None]()
     expected = InventoryCell(cell_number=12, item="value")
 
     sut.set(cell_number=13, item="value")
@@ -79,7 +79,7 @@ def test_get_first_found_item():
 
 
 def test_get_last_found_item():
-    sut = create_common_inventory_handler_for_tests()
+    sut = InventoryHandler[str | None]()
     expected = InventoryCell(cell_number=14, item="value")
 
     sut.set(cell_number=12, item="value")
@@ -91,20 +91,20 @@ def test_get_last_found_item():
 
 def test_cell_number_out_of_range_while_setting():
     with raises(CellNumberOutOfRange):
-        sut = create_common_inventory_handler_for_tests()
+        sut = InventoryHandler[str | None]()
 
         sut.set(cell_number=100, item="value")
 
 
 def test_cell_number_out_of_range_while_getting():
     with raises(CellNumberOutOfRange):
-        sut = create_common_inventory_handler_for_tests()
+        sut = InventoryHandler()
 
         sut.get(cell_number=100)
 
 
 def test_set_item_into_first_found_empty_cell():
-    sut = create_common_inventory_handler_for_tests(default_factory=lambda: "default")
+    sut = InventoryHandler(default_factory=lambda: "default")
     expected = InventoryCell(cell_number=11, item="value")
 
     for i in range(1, 11):
@@ -115,7 +115,7 @@ def test_set_item_into_first_found_empty_cell():
 
 
 def test_show_what_contains_cell():
-    sut = create_common_inventory_handler_for_tests()
+    sut = InventoryHandler[str | None]()
     expected = "value"
 
     sut.set(cell_number=10, item="value")
@@ -127,7 +127,7 @@ def test_show_what_contains_cell():
 
 @mark.xfail  # FIXME Придумать что-нибудь...
 def test_delete_item_after_set_or_get_if_necessary():
-    sut = create_common_inventory_handler_for_tests()
+    sut = InventoryHandler[int | None]()
     for i in range(1, 21):
         sut.set(cell_number=i, item=8)
 

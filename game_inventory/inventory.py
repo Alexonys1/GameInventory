@@ -15,12 +15,12 @@ class Inventory[T](ABC):
             rows: int,
             columns: int,
             numeration_mode: NumerationModesForInventory,
-            default_factory: Callable[[], T | None] = lambda: None,
+            default_factory: Callable[[], T] = lambda: None,
     ):
         self._rows: Final[int] = rows
         self._columns: Final[int] = columns
         self._numeration_mode: Final[str] = numeration_mode
-        self._all_cells: Final[dict[int, T | None]] = {
+        self._all_cells: Final[dict[int, T]] = {
             num: default_factory()
             for num in range(1, rows * columns + 1)
         }
@@ -78,7 +78,7 @@ class Inventory[T](ABC):
             raise CellNumberOutOfRange(cell_number, len(self._all_cells))
 
     @validate_call
-    def get_first_found_item(self, item: T) -> InventoryCell[int, T]:
+    def get_first_found_item(self, item: T) -> InventoryCell:
         self._on_get()
         for key, value in self._all_cells.items():
             if self._all_cells[key] == item:
@@ -86,7 +86,7 @@ class Inventory[T](ABC):
         raise ItemNotFound(item)
 
     @validate_call
-    def get_last_found_item(self, item: T) -> InventoryCell[int, T]:
+    def get_last_found_item(self, item: T) -> InventoryCell:
         self._on_get()
         for key, value in reversed(self._all_cells.items()):
             if self._all_cells[key] == item:
