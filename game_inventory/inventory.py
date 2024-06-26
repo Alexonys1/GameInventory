@@ -3,6 +3,7 @@ import inspect
 from abc import ABC, abstractmethod
 from pydantic import validate_call
 from collections.abc import Callable
+from functools import wraps
 from typing import Final
 
 from loguru import logger as log
@@ -28,7 +29,7 @@ class Inventory[T](ABC):
             num: default_factory()
             for num in range(1, rows * columns + 1)
         }
-        self._default_item: Final[T] = default_factory()
+        self._default_factory: Final[Callable[[], T]] = default_factory
         log.debug(f"Создан экземпляр {self}")
         self.__post_init__()
 
@@ -66,11 +67,27 @@ class Inventory[T](ABC):
     def __post_init__(self) -> None:
         """Метод, выполняющийся после инициализации."""
 
+    @staticmethod
+    def _on_set(function):
+        @wraps(function)
+        def wrapper(self, *args, **kwargs):
+            self._do_action_on_set(self, *args, **kwargs)
+            function(self, *args, **kwargs)  # Функция get или set.
+        return wrapper
+
+    @staticmethod
+    def _on_get(function):
+        @wraps(function)
+        def wrapper(self, *args, **kwargs):
+            self._do_action_on_get(self, *args, **kwargs)
+            return function(self, *args, **kwargs)  # Функция get или set.
+        return wrapper
+
     @validate_call
+    @_on_set
     def set(self, cell_number: int, item: T) -> None:
         func_name = inspect.currentframe().f_code.co_name
         log.trace(f"Вызывается метод {func_name}")
-        self._on_set()
         if 1 <= cell_number <= len(self._all_cells):
             log.debug(f"{func_name} записывает в ячейку №{cell_number} {item=}")
             self._all_cells[cell_number] = item
@@ -78,10 +95,10 @@ class Inventory[T](ABC):
             raise CellNumberOutOfRange(cell_number, len(self._all_cells))
 
     @validate_call
+    @_on_get
     def get(self, cell_number: int) -> T:
         func_name = inspect.currentframe().f_code.co_name
         log.trace(f"Вызывается метод {func_name}")
-        self._on_get()
         if 1 <= cell_number <= len(self._all_cells):
             result = self._all_cells[cell_number]
             log.debug(f"{func_name} возвращает из ячейки №{cell_number} {result}")
@@ -90,10 +107,10 @@ class Inventory[T](ABC):
             raise CellNumberOutOfRange(cell_number, len(self._all_cells))
 
     @validate_call
+    @_on_get
     def get_first_found_item(self, item: T) -> InventoryCell:
         func_name = inspect.currentframe().f_code.co_name
         log.trace(f"Вызывается метод {func_name}")
-        self._on_get()
         for key, value in self._all_cells.items():
             if self._all_cells[key] == item:
                 result = InventoryCell(cell_number=key, item=value)
@@ -102,10 +119,10 @@ class Inventory[T](ABC):
         raise ItemNotFound(item)
 
     @validate_call
+    @_on_get
     def get_last_found_item(self, item: T) -> InventoryCell:
         func_name = inspect.currentframe().f_code.co_name
         log.trace(f"Вызывается метод {func_name}")
-        self._on_get()
         for key, value in reversed(self._all_cells.items()):
             if self._all_cells[key] == item:
                 result = InventoryCell(cell_number=key, item=value)
@@ -114,12 +131,12 @@ class Inventory[T](ABC):
         raise ItemNotFound(item)
 
     @validate_call
+    @_on_set
     def set_into_first_found_empty_cell(self, item: T) -> None:
         func_name = inspect.currentframe().f_code.co_name
         log.trace(f"Вызывается метод {func_name}")
-        self._on_set()
         for key, value in self._all_cells.items():
-            if value == self._default_item:
+            if value == self._default_factory():
                 log.debug(f"{func_name} записывает в ячейку №{key} {item=}")
                 self._all_cells[key] = item
                 break
@@ -136,9 +153,9 @@ class Inventory[T](ABC):
             raise CellNumberOutOfRange(cell_number, len(self._all_cells))
 
     @abstractmethod
-    def _on_set(self) -> None:
+    def _do_action_on_set(self, *args, **kwargs) -> None:
         """The action to be performed on setting."""
 
     @abstractmethod
-    def _on_get(self) -> None:
+    def _do_action_on_get(self, *args, **kwargs) -> None:
         """The action to be performed on getting."""

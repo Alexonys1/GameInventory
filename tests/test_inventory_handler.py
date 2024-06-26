@@ -22,10 +22,10 @@ class InventoryHandler[T](Inventory[T]):
     def __post_init__(self):
         self.test_var: str = "POST INIT"  # Добавляю сугубо для теста.
 
-    def _on_set(self) -> None:
+    def _do_action_on_set(self, *args, **kwargs) -> None:
         self.test_var = "ON SET"
 
-    def _on_get(self) -> None:
+    def _do_action_on_get(self, *args, **kwargs) -> None:
         self.test_var = "ON GET"
 
     def _del_item_if_necessary(self) -> None:
