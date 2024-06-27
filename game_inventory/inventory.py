@@ -30,6 +30,7 @@ class Inventory[T](ABC):
             for num in range(1, rows * columns + 1)
         }
         self._default_factory: Final[Callable[[], T]] = default_factory
+        self._last_used_cell_number: int = 0
         log.debug(f"Создан экземпляр {self}")
         self.__post_init__()
 
@@ -71,16 +72,25 @@ class Inventory[T](ABC):
     def _on_set(function):
         @wraps(function)
         def wrapper(self, *args, **kwargs):
-            self._do_action_on_set(self, *args, **kwargs)
             function(self, *args, **kwargs)  # Функция get или set.
+            self._do_action_on_set(self._last_used_cell_number)
         return wrapper
-
+    '''
+    @staticmethod
+    def _setter_with_cell_number_and_item(function):
+        @wraps(function)
+        def wrapper(self, cell_number: int, item: T):
+            self._do_action_on_set(self, cell_number=cell_number, item=item)
+            function(self, cell_number, item)  # Функция get или set.
+        return wrapper
+    '''
     @staticmethod
     def _on_get(function):
         @wraps(function)
         def wrapper(self, *args, **kwargs):
-            self._do_action_on_get(self, *args, **kwargs)
-            return function(self, *args, **kwargs)  # Функция get или set.
+            result = function(self, *args, **kwargs)  # Функция get или set.
+            self._do_action_on_get(self._last_used_cell_number)
+            return result
         return wrapper
 
     @validate_call
@@ -91,6 +101,7 @@ class Inventory[T](ABC):
         if 1 <= cell_number <= len(self._all_cells):
             log.debug(f"{func_name} записывает в ячейку №{cell_number} {item=}")
             self._all_cells[cell_number] = item
+            self._last_used_cell_number = cell_number
         else:
             raise CellNumberOutOfRange(cell_number, len(self._all_cells))
 
@@ -102,6 +113,7 @@ class Inventory[T](ABC):
         if 1 <= cell_number <= len(self._all_cells):
             result = self._all_cells[cell_number]
             log.debug(f"{func_name} возвращает из ячейки №{cell_number} {result}")
+            self._last_used_cell_number = cell_number
             return result
         else:
             raise CellNumberOutOfRange(cell_number, len(self._all_cells))
@@ -115,6 +127,7 @@ class Inventory[T](ABC):
             if self._all_cells[key] == item:
                 result = InventoryCell(cell_number=key, item=value)
                 log.debug(f"{func_name} возвращает {result}")
+                self._last_used_cell_number = key
                 return result
         raise ItemNotFound(item)
 
@@ -127,6 +140,7 @@ class Inventory[T](ABC):
             if self._all_cells[key] == item:
                 result = InventoryCell(cell_number=key, item=value)
                 log.debug(f"{func_name} возвращает {result}")
+                self._last_used_cell_number = key
                 return result
         raise ItemNotFound(item)
 
@@ -139,6 +153,7 @@ class Inventory[T](ABC):
             if value == self._default_factory():
                 log.debug(f"{func_name} записывает в ячейку №{key} {item=}")
                 self._all_cells[key] = item
+                self._last_used_cell_number = key
                 break
 
     @validate_call
@@ -148,14 +163,15 @@ class Inventory[T](ABC):
         if 1 <= cell_number <= len(self._all_cells):
             result = self._all_cells[cell_number]
             log.debug(f"{func_name} возвращает из ячейки №{cell_number} {result}")
+            self._last_used_cell_number = cell_number
             return result
         else:
             raise CellNumberOutOfRange(cell_number, len(self._all_cells))
 
     @abstractmethod
-    def _do_action_on_set(self, *args, **kwargs) -> None:
+    def _do_action_on_set(self, cell_number: int) -> None:
         """The action to be performed on setting."""
 
     @abstractmethod
-    def _do_action_on_get(self, *args, **kwargs) -> None:
+    def _do_action_on_get(self, cell_number: int) -> None:
         """The action to be performed on getting."""
